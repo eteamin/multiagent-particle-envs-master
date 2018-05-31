@@ -4,6 +4,7 @@ from multiagent.scenario import BaseScenario
 
 class Scenario(BaseScenario):
     def make_world(self):
+        # world object keeps list of agents and entities (can change at execution-time!)
         world = World()
         # add agents
         world.agents = [Agent() for i in range(1)]

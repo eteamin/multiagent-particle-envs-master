@@ -6,13 +6,20 @@ class Scenario(BaseScenario):
     def make_world(self):
         world = World()
         # set any world properties first
-        world.dim_c = 10        
+
+        # world.dim_c is equal to communication channel dimensionality
+        #### in this class the number of communication channel's dimension is changed to 10 channel per each agent
+        world.dim_c = 10
+
         # add agents
         world.agents = [Agent() for i in range(2)]
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
             agent.collide = False
+
+            # physical motor noise amount
             # agent.u_noise = 1e-1
+            # communication noise amount
             # agent.c_noise = 1e-1
         # add landmarks
         world.landmarks = [Landmark() for i in range(3)]
@@ -30,6 +37,9 @@ class Scenario(BaseScenario):
             agent.goal_a = None
             agent.goal_b = None
         # want other agent to go to the goal landmark
+        #### in my mind assigning other agent as the agent's goal tell each agent that they should help another agent to reach to a landmark
+        #### actually in this manner cooperative agent sets their goal
+        #### each agent should help the other agent to reach to its goal and set to a landmark
         world.agents[0].goal_a = world.agents[1]
         world.agents[0].goal_b = np.random.choice(world.landmarks)
         world.agents[1].goal_a = world.agents[0]
@@ -46,6 +56,9 @@ class Scenario(BaseScenario):
         world.agents[1].goal_a.color = world.agents[1].goal_b.color                               
         # set random initial states
         for agent in world.agents:
+            ####p_pos == physical position
+            ####p_vel = physical velocity
+
             agent.state.p_pos = np.random.uniform(-1,+1, world.dim_p)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
@@ -77,6 +90,7 @@ class Scenario(BaseScenario):
         entity_pos = []
         for entity in world.landmarks: #world.entities:
             entity_pos.append(entity.state.p_pos - agent.state.p_pos)
+
         # entity colors
         entity_color = []
         for entity in world.landmarks: #world.entities:
@@ -86,5 +100,11 @@ class Scenario(BaseScenario):
         for other in world.agents:
             if other is agent: continue
             comm.append(other.state.c)
+            #### entity position miad faseleye agent ro ta landmark hesab mikone va bad oun ro be onvane natije barmigardune
+            #### observation agent ha shamele:
+            # physical velocity (dimensione hr kudumeshun 2 ta hast) ,
+            # entity_pos be surate positione landmark ha (3 ta 2taii dimensionaesh hast),
+            # colore agente moqabel (chon be onvane hadafeshe)(3 dimensional)
+            # va hamchenin communicationi ke agente dge dare  (10 ta dimensionesh hast)
         return np.concatenate([agent.state.p_vel] + entity_pos + [goal_color[1]] + comm)
             

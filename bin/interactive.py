@@ -10,7 +10,7 @@ import multiagent.scenarios as scenarios
 if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-s', '--scenario', default='simple.py', help='Path of the scenario Python script.')
+    parser.add_argument('-s', '--scenario', default='simple_speaker_listener.py', help='Path of the scenario Python script.')
     args = parser.parse_args()
 
     # load scenario from script
@@ -34,6 +34,7 @@ if __name__ == '__main__':
         obs_n, reward_n, done_n, _ = env.step(act_n)
         # render all agent views
         env.render()
+
         # display rewards
         #for agent in env.world.agents:
         #    print(agent.name + " reward: %0.3f" % env._get_reward(agent))

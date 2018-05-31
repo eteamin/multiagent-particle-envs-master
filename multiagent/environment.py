@@ -3,6 +3,10 @@ from gym import spaces
 from gym.envs.registration import EnvSpec
 import numpy as np
 
+#############################################
+# ./multiagent/environment.py: contains code for environment simulation (interaction physics, _step() function, etc.)
+############################################
+
 # environment for all agents in the multiagent world
 # currently code assumes that no agents will be created/destroyed at runtime!
 class MultiAgentEnv(gym.Env):
@@ -41,10 +45,13 @@ class MultiAgentEnv(gym.Env):
             total_action_space = []
             # physical action space
             if self.discrete_action_space:
+                ### dar surati ke action halate discrete bashe ounvaqt action spacesh be in ravesh meqdard dehi mishe
                 u_action_space = spaces.Discrete(world.dim_p * 2 + 1)
             else:
+                ### agar yek senario action hash be surate continouse bashe dar in surat action spacesh be in surat meqdar degi mishe
                 u_action_space = spaces.Box(low=-agent.u_range, high=+agent.u_range, shape=(world.dim_p,))
             if agent.movable:
+                ### agar agent taze movable bashe in action ha be action spacesh append mishan
                 total_action_space.append(u_action_space)
             # communication action space
             if self.discrete_action_space:
@@ -52,6 +59,7 @@ class MultiAgentEnv(gym.Env):
             else:
                 c_action_space = spaces.Box(low=0.0, high=1.0, shape=(world.dim_c,))
             if not agent.silent:
+                #### agar agent silent nabashe dar in surat hast ke action haii ke marbut be communication channel mishe be action spacesh append mishan
                 total_action_space.append(c_action_space)
             # total action space
             if len(total_action_space) > 1:
@@ -86,6 +94,9 @@ class MultiAgentEnv(gym.Env):
         for i, agent in enumerate(self.agents):
             self._set_action(action_n[i], agent, self.action_space[i])
         # advance world state
+        ### to change the state the world this function is actually using the step() funtion implemented in core.py and after
+        ### changing the state of the world then this fucntion return the observation and reward and 'done' for each one of the agents
+
         self.world.step()
         # record observation for each agent
         for agent in self.agents:
@@ -135,6 +146,7 @@ class MultiAgentEnv(gym.Env):
 
     # get reward for a particular agent
     def _get_reward(self, agent):
+
         if self.reward_callback is None:
             return 0.0
         return self.reward_callback(agent, self.world)
@@ -149,7 +161,7 @@ class MultiAgentEnv(gym.Env):
             size = action_space.high - action_space.low + 1
             index = 0
             for s in size:
-                act.append(action[index:(index+s)])
+                act.append(action[index:(index + s)])
                 index += s
             action = act
         else:
@@ -170,10 +182,17 @@ class MultiAgentEnv(gym.Env):
                     action[0][:] = 0.0
                     action[0][d] = 1.0
                 if self.discrete_action_space:
+                    ### har kudum az element haye actione agent1 neshun mide ke cheqadr oun agent dar ye
+                    ### direction harekat kone.
                     agent.action.u[0] += action[0][1] - action[0][2]
                     agent.action.u[1] += action[0][3] - action[0][4]
                 else:
                     agent.action.u = action[0]
+
+
+            #### 5 taiii budane actione agent1 be khatere bala,paiin,
+            ###### inja miad actione physicali ro ke entekhab karde dar yek meqadri be name sensitivity zarb mikone
+            #### ke biad dar vaqe be actioni ke dare entekhab karde ye halate acceleration bede
             sensitivity = 5.0
             if agent.accel is not None:
                 sensitivity = agent.accel
@@ -187,7 +206,8 @@ class MultiAgentEnv(gym.Env):
             else:
                 agent.action.c = action[0]
             action = action[1:]
-        # make sure we used all elements of action
+            # make sure we used all elements of action
+
         assert len(action) == 0
 
     # reset rendering assets

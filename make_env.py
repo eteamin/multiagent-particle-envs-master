@@ -12,6 +12,11 @@ of size (env.world.dim_p + env.world.dim_c, 1). Physical actions precede
 communication actions in this array. See environment.py for more details.
 """
 
+
+
+################################
+# make_env.py: contains code for importing a multiagent environment as an OpenAI Gym-like object.
+################################
 def make_env(scenario_name, benchmark=False):
     '''
     Creates a MultiAgentEnv object as env. This can be used similar to a gym

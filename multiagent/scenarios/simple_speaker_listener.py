@@ -44,7 +44,11 @@ class Scenario(BaseScenario):
         world.landmarks[0].color = np.array([0.65,0.15,0.15])
         world.landmarks[1].color = np.array([0.15,0.65,0.15])
         world.landmarks[2].color = np.array([0.15,0.15,0.65])
+
+
         # special colors for goals
+        #### vaqti ke inja miad colore agent ro avaz mikone colore khode agent1 ham avaz mishe
+
         world.agents[0].goal_a.color = world.agents[0].goal_b.color + np.array([0.45, 0.45, 0.45])
         # set random initial states
         for agent in world.agents:
@@ -84,6 +88,8 @@ class Scenario(BaseScenario):
         
         # speaker
         if not agent.movable:
+            ##### observationi ke agent0 daryaft mikone az mohit colore oun landmarki hast ke be onvane goal gozashte
+            #### oun color ro be onvane observatione agent0 barmigardune
             return np.concatenate([goal_color])
         # listener
         if agent.silent:

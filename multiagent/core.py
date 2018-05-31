@@ -136,6 +136,8 @@ class World(object):
         for i,agent in enumerate(self.agents):
             if agent.movable:
                 noise = np.random.randn(*agent.action.u.shape) * agent.u_noise if agent.u_noise else 0.0
+                #### tuye simple_speaker_listener chon agent.u_noise halate None dare pas dge niazi nist
+                #### ke noise be action physical agent1 ezafe beshe va actionesh ro mostaqim submit mikone
                 p_force[i] = agent.action.u + noise                
         return p_force
 
