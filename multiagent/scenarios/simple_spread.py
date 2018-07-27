@@ -68,17 +68,134 @@ class Scenario(BaseScenario):
         dist_min = agent1.size + agent2.size
         return True if dist < dist_min else False
 
-    def reward(self, agent, world):
-        # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
-        rew = 0
-        for l in world.landmarks:
-            dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
-            rew -= min(dists)
+
+    def reward(
+            self,
+            agent,
+            world,
+            terminal,
+            done,
+            agents_positions,
+    ):
+        rew_sum_dist = 0
+        rew_terminate = 0
+        rew_goal = 0
+        rew_out_goal = 0
+        rew_collision = 0
+
+        for t in terminal:
+            if t:
+                rew_terminate -= 10
+
+        agents2land_dist_pre = []
+        for land in world.landmarks:
+            land_pos = land.state.p_pos
+            for agent_pos in agents_positions:
+                land_agent_dist_ = land_pos - agent_pos
+                land_agent_dist = np.sqrt(np.sum(np.square(land_agent_dist_)))
+                agents2land_dist_pre.append(land_agent_dist)
+
+        x_temp = [agents2land_dist_pre[0] + agents2land_dist_pre[4] + agents2land_dist_pre[8],
+                           agents2land_dist_pre[0] + agents2land_dist_pre[5] + agents2land_dist_pre[7],
+                           agents2land_dist_pre[1] + agents2land_dist_pre[3] + agents2land_dist_pre[8],
+                           agents2land_dist_pre[1] + agents2land_dist_pre[5] + agents2land_dist_pre[6],
+                           agents2land_dist_pre[2] + agents2land_dist_pre[3] + agents2land_dist_pre[7],
+                           agents2land_dist_pre[2] + agents2land_dist_pre[4] + agents2land_dist_pre[6]]
+
+        min_dist_pre = min([agents2land_dist_pre[0] + agents2land_dist_pre[4] + agents2land_dist_pre[8],
+                           agents2land_dist_pre[0] + agents2land_dist_pre[5] + agents2land_dist_pre[7],
+                           agents2land_dist_pre[1] + agents2land_dist_pre[3] + agents2land_dist_pre[8],
+                           agents2land_dist_pre[1] + agents2land_dist_pre[5] + agents2land_dist_pre[6],
+                           agents2land_dist_pre[2] + agents2land_dist_pre[3] + agents2land_dist_pre[7],
+                           agents2land_dist_pre[2] + agents2land_dist_pre[4] + agents2land_dist_pre[6]])
+        # print('\nagents2land_dist_pre :')
+        # print(agents2land_dist_pre.__str__())
+        print('\nmin of min_dist_pre :')
+        print(min_dist_pre.__str__())
+        print('\nindex of the min distance to each landmark')
+        print(x_temp.index(min_dist_pre))
+
+        print('################################################################')
+        agents2land_dist = []
+        for land in world.landmarks:
+            land_pos = land.state.p_pos
+            for agent in world.agents:
+                agent_pos = agent.state.p_pos
+                land_agent_dist_ = land_pos - agent_pos
+                land_agent_dist = np.sqrt(np.sum(np.square(land_agent_dist_)))
+                agents2land_dist.append(land_agent_dist)
+        min_dist = min([agents2land_dist[0] + agents2land_dist[4] +
+                           agents2land_dist[8],
+                           agents2land_dist[0] + agents2land_dist[5] +
+                           agents2land_dist[7],
+                           agents2land_dist[1] + agents2land_dist[3] +
+                           agents2land_dist[8],
+                           agents2land_dist[1] + agents2land_dist[5] +
+                           agents2land_dist[6],
+                           agents2land_dist[2] + agents2land_dist[3] +
+                           agents2land_dist[7],
+                           agents2land_dist[2] + agents2land_dist[4] +
+                           agents2land_dist[6]])
+        x_temp = [agents2land_dist[0] + agents2land_dist[4] +
+                           agents2land_dist[8],
+                           agents2land_dist[0] + agents2land_dist[5] +
+                           agents2land_dist[7],
+                           agents2land_dist[1] + agents2land_dist[3] +
+                           agents2land_dist[8],
+                           agents2land_dist[1] + agents2land_dist[5] +
+                           agents2land_dist[6],
+                           agents2land_dist[2] + agents2land_dist[3] +
+                           agents2land_dist[7],
+                           agents2land_dist[2] + agents2land_dist[4] +
+                           agents2land_dist[6]]
+        # print('\nagents2land_dist :')
+        # print(agents2land_dist.__str__())
+        print('\nmin min_dist:')
+        print(min_dist.__str__())
+        print('\nindex of the min distance to each landmark')
+        print(x_temp.index(min_dist))
+
+        agent_2land_dist_min = min_dist_pre - min_dist
+        rew_sum_dist = agent_2land_dist_min
+
+        # print('\nreward sum distance : ')
+        # print(rew_sum_dist.__str__())
+        print('################################################################')
+        # print('################################################################')
+        # print('################################################################')
+
+        for l, sublist in enumerate(done):
+            if sublist[-1] is True and sublist[-2] is False:
+                rew_goal += 5
+
+            if sublist[-1] is False and sublist[-2] is True:
+                rew_out_goal -= 5
+
         if agent.collide:
-            for a in world.agents:
-                if self.is_collision(a, agent):
-                    rew -= 1
-        return rew
+            collision = [False] * len(world.agents)
+            for i, agent in enumerate(world.agents):
+                for a in world.agents:
+                    if agent is a:
+                        continue
+                    if self.is_collision(a, agent):
+                        rew_collision -= 10
+
+        print('\nrew_collision:')
+        print(rew_collision.__str__())
+        print('\nrew_out_goal')
+        print(rew_out_goal.__str__())
+        print('\nrew_goal:')
+        print(rew_goal.__str__())
+        print('\nrew_sum_dist:')
+        print(rew_sum_dist.__str__())
+        print('\nrew_terminal')
+        print(rew_terminate.__str__())
+        print('################################################################')
+        # print('################################################################')
+        # print('################################################################')
+
+        reward_total = rew_collision + rew_out_goal + rew_goal + rew_sum_dist + rew_terminate
+        return reward_total/10.0
 
     def observation(self, agent, world):
         # get positions of all entities in this agent's reference frame
@@ -97,3 +214,49 @@ class Scenario(BaseScenario):
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
         return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+
+    def done(self, agent, world):
+        distance_to_each_landmark = [
+            np.sqrt(np.sum(np.square(a.state.p_pos - agent.state.p_pos)))
+            for a in world.landmarks
+        ]
+        dist_min = [
+            a.size + agent.size
+            for a in world.landmarks
+        ]
+        done__ = [
+            True if distance_to_each_landmark[i] < dist_min[i] else False
+            for i in range(len(distance_to_each_landmark))
+        ]
+        return True if any(done__) else False
+
+        # distance_to_each_landmark = [
+        #     np.sqrt(np.sum(np.square(a.state.p_pos - agent.state.p_pos)))
+        #     for a in world.landmarks
+        # ]
+        # return True if max(distance_to_each_landmark) < 0.1 else False
+
+    def terminal(self, agent):
+        x = abs(agent.state.p_pos[0])
+        y = abs(agent.state.p_pos[1])
+        if (x > 1.0 or y > 1.0):
+            return True
+        return False
+
+    def collision_detection(self, world):
+        collision = [False] * len(world.agents)
+        for i, agent in enumerate(world.agents):
+            for a in world.agents:
+                if agent is a:
+                    continue
+                if self.is_collision(a, agent):
+                    collision[i] = True
+
+        return collision
+
+    def get_in_get_out_from_landmark(self, done):
+        agents_getin_getout = [False] * len(done)
+        for l, sublist in enumerate(done):
+            if sublist[-1] is False and sublist[-2] is True:
+                agents_getin_getout[l] = True
+        return agents_getin_getout

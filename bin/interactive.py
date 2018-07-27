@@ -10,7 +10,7 @@ import multiagent.scenarios as scenarios
 if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-s', '--scenario', default='simple_speaker_listener.py', help='Path of the scenario Python script.')
+    parser.add_argument('-s', '--scenario', default='simple_spread.py', help='Path of the scenario Python script.')
     args = parser.parse_args()
 
     # load scenario from script
@@ -18,8 +18,19 @@ if __name__ == '__main__':
     # create world
     world = scenario.make_world()
     # create multiagent environment
-    env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, info_callback=None, shared_viewer = False)
-    # render call to create viewer window (necessary only for interactive policies)
+    env = MultiAgentEnv(
+        world=world,
+        reward_callback=scenario.reward,
+        reset_callback=scenario.reset_world,
+        observation_callback=scenario.observation,
+        done_callback=scenario.done,
+        terminal_callback=scenario.terminal,
+        collision_callback=scenario.collision_detection,
+        getin_getout_check_callback=scenario.get_in_get_out_from_landmark,
+        info_callback=None,
+        shared_viewer=False
+
+    )    # render call to create viewer window (necessary only for interactive policies)
     env.render()
     # create interactive policies for each agent
     policies = [InteractivePolicy(env,i) for i in range(env.n)]
@@ -31,7 +42,7 @@ if __name__ == '__main__':
         for i, policy in enumerate(policies):
             act_n.append(policy.action(obs_n[i]))
         # step environment
-        obs_n, reward_n, done_n, _ = env.step(act_n)
+            obs_n, reward_n, done_n, _, _, _ = env.step(act_n)
         # render all agent views
         env.render()
 

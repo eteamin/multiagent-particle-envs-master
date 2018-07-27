@@ -14,9 +14,19 @@ class MultiAgentEnv(gym.Env):
         'render.modes' : ['human', 'rgb_array']
     }
 
-    def __init__(self, world, reset_callback=None, reward_callback=None,
-                 observation_callback=None, info_callback=None,
-                 done_callback=None, shared_viewer=True):
+    def __init__(
+        self,
+        world,
+        reset_callback=None,
+        reward_callback=None,
+        observation_callback=None,
+        info_callback=None,
+        done_callback=None,
+        terminal_callback=None,
+        collision_callback = None,
+        getin_getout_check_callback = None,
+        shared_viewer=True
+    ):
 
         self.world = world
         self.agents = self.world.policy_agents
@@ -28,6 +38,9 @@ class MultiAgentEnv(gym.Env):
         self.observation_callback = observation_callback
         self.info_callback = info_callback
         self.done_callback = done_callback
+        self.terminal_callback = terminal_callback
+        self.collision_callback = collision_callback
+        self.getin_getout_check_callback = getin_getout_check_callback
         # environment parameters
         self.discrete_action_space = True
         # if true, action is a number 0...N, otherwise action is a one-hot N-dimensional vector
@@ -36,8 +49,8 @@ class MultiAgentEnv(gym.Env):
         self.force_discrete_action = world.discrete_action if hasattr(world, 'discrete_action') else False
         # if true, every agent has the same reward
         self.shared_reward = False
+        self.number_of_agents_in_the_landmark = 0
         self.time = 0
-
         # configure spaces
         self.action_space = []
         self.observation_space = []
@@ -86,32 +99,46 @@ class MultiAgentEnv(gym.Env):
 
     def _step(self, action_n):
         obs_n = []
-        reward_n = []
+        # reward_n = []
         done_n = []
+        terminal_n = []
         info_n = {'n': []}
+        agents_positions = []
+        agents_collision = [False, False, False]
+        agents_getin_getout = [False, False, False]
         self.agents = self.world.policy_agents
         # set action for each agent
         for i, agent in enumerate(self.agents):
             self._set_action(action_n[i], agent, self.action_space[i])
+            agents_positions.append([agent.state.p_pos.copy()])
+        # print('\nagents_positions:')
+        # print(agents_positions.__str__())
         # advance world state
-        ### to change the state the world this function is actually using the step() funtion implemented in core.py and after
-        ### changing the state of the world then this fucntion return the observation and reward and 'done' for each one of the agents
-
+        done_for_pre_now = [[self._get_done(agent)] for agent in self.agents]
         self.world.step()
+
         # record observation for each agent
-        for agent in self.agents:
+        for i,agent in enumerate(self.agents):
             obs_n.append(self._get_obs(agent))
-            reward_n.append(self._get_reward(agent))
+            terminal_n.append(self._get_terminal(agent))
             done_n.append(self._get_done(agent))
+            done_for_pre_now[i].append(self._get_done(agent))
 
+
+            self.number_of_agents_in_the_landmark = done_n.count(True)
             info_n['n'].append(self._get_info(agent))
-
+        reward_n = [self._get_reward(agent, terminal_n, done_for_pre_now, agents_positions) for agent in self.agents]
+        agents_collision = self._get_collision()
+        agents_getin_getout =  self._get_getin_getout_check(done_for_pre_now)
+        # print('agents_next_position')
+        # print(self.agents[0].state.p_pos.__str__())
+        #
         # all agents get total reward in cooperative case
-        reward = np.sum(reward_n)
-        if self.shared_reward:
-            reward_n = [reward] * self.n
+        # reward = np.sum(reward_n)
+        # if self.shared_reward:
+        #     reward_n = [reward] * self.n
 
-        return obs_n, reward_n, done_n, info_n
+        return obs_n, reward_n, done_n, agents_collision, agents_getin_getout, terminal_n
 
     def _reset(self):
         # reset world
@@ -137,25 +164,40 @@ class MultiAgentEnv(gym.Env):
             return np.zeros(0)
         return self.observation_callback(agent, self.world)
 
-    # get dones for a particular agent
-    # unused right now -- agents are allowed to go beyond the viewing screen
+
     def _get_done(self, agent):
         if self.done_callback is None:
             return False
         return self.done_callback(agent, self.world)
 
     # get reward for a particular agent
-    def _get_reward(self, agent):
-
+    def _get_reward(self, agent, terminal_n, done_n, agents_positions):
         if self.reward_callback is None:
             return 0.0
-        return self.reward_callback(agent, self.world)
+        return self.reward_callback(agent, self.world, terminal_n, done_n, agents_positions)
+
+    def _get_collision(self):
+        if self.collision_callback is None:
+            return [False] * len(self.agents)
+        return self.collision_callback(self.world)
+
+    def _get_getin_getout_check(self, done):
+        if self.getin_getout_check_callback is None:
+            return [False] * len(self.world.agents)
+        return self.getin_getout_check_callback(done)
+
+    def _get_terminal(self, agent):
+        if self.terminal_callback is None:
+            return False
+        return self.terminal_callback(agent)
 
     # set env action for a particular agent
+
     def _set_action(self, action, agent, action_space, time=None):
         agent.action.u = np.zeros(self.world.dim_p)
         agent.action.c = np.zeros(self.world.dim_c)
         # process action
+        agent_positions = []
         if isinstance(action_space, spaces.MultiDiscrete):
             act = []
             size = action_space.high - action_space.low + 1
@@ -182,17 +224,11 @@ class MultiAgentEnv(gym.Env):
                     action[0][:] = 0.0
                     action[0][d] = 1.0
                 if self.discrete_action_space:
-                    ### har kudum az element haye actione agent1 neshun mide ke cheqadr oun agent dar ye
-                    ### direction harekat kone.
                     agent.action.u[0] += action[0][1] - action[0][2]
                     agent.action.u[1] += action[0][3] - action[0][4]
                 else:
                     agent.action.u = action[0]
 
-
-            #### 5 taiii budane actione agent1 be khatere bala,paiin,
-            ###### inja miad actione physicali ro ke entekhab karde dar yek meqadri be name sensitivity zarb mikone
-            #### ke biad dar vaqe be actioni ke dare entekhab karde ye halate acceleration bede
             sensitivity = 5.0
             if agent.accel is not None:
                 sensitivity = agent.accel
@@ -229,7 +265,7 @@ class MultiAgentEnv(gym.Env):
                     else:
                         word = alphabet[np.argmax(other.state.c)]
                     message += (other.name + ' to ' + agent.name + ': ' + word + '   ')
-            print(message)
+            # print(message)
 
         if close:
             # close any existic renderers
